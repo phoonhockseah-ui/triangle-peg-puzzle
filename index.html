@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Triangle Peg Puzzle</title>
+<style>
+:root{--bg:#eef1f5;--ink:#1c2733;--mute:#5b6a7a;--card:#fff;--line:#d3dae3;--accent:#2f6f6a;--accent-ink:#fff;--bad:#b3402f;--wood:#c08a4f;--hole:#4a2f18;--hi:#fff0a8;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12181f;--ink:#e6ecf2;--mute:#9aa9b8;--card:#1a232d;--line:#2c3947;--accent:#5fb8ae;--accent-ink:#0c1a18;--bad:#ef8a78;--wood:#8a6038;--hole:#2a1a0d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12181f;--ink:#e6ecf2;--mute:#9aa9b8;--card:#1a232d;--line:#2c3947;--accent:#5fb8ae;--accent-ink:#0c1a18;--bad:#ef8a78;--wood:#8a6038;--hole:#2a1a0d;color-scheme:dark}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 40px}
+h1{font-size:clamp(1.7rem,4vw,2.4rem);margin:0 0 4px;letter-spacing:-.02em}
+.sub{color:var(--mute);margin:0 0 20px;max-width:62ch}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px}
+.group{display:flex;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 10px;color:var(--mute);font-size:.9rem}
+input[type=range]{accent-color:var(--accent);width:110px;margin:0 0 0 8px}
+button{font:inherit;color:inherit;cursor:pointer}
+.act{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 16px;font-weight:600}
+.act.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.act:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.stat b{display:block;font-size:1.6rem;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat small{color:var(--mute)}
+.layout{display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start}
+@media (max-width:760px){.layout{grid-template-columns:1fr}}
+.board{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+svg{display:block;width:100%;max-width:540px;margin:0 auto;height:auto}
+.tri{fill:var(--wood);stroke:var(--wood);stroke-width:24;stroke-linejoin:round}
+.hole{cursor:pointer;outline:none}
+.h{fill:var(--hole);stroke:transparent;stroke-width:4}
+.peg{stroke:rgba(0,0,0,.35);stroke-width:2}
+.num{font:700 13px system-ui,sans-serif;text-anchor:middle;dominant-baseline:central;pointer-events:none;fill:rgba(255,255,255,.4)}
+.on .num{fill:rgba(0,0,0,.72)}
+.sl .peg{stroke:#fff;stroke-width:4}
+.tg .h,.ht .h{stroke:var(--hi);stroke-width:4}
+.hf .h{stroke:var(--hi);stroke-width:3;stroke-dasharray:5 4}
+.hole:focus-visible .h{stroke:var(--hi);stroke-width:4}
+.msg{min-height:1.6em;margin:12px 4px 0;color:var(--mute)}
+.msg.win{color:var(--accent);font-weight:700}
+.msg.err{color:var(--bad)}
+.log{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.log h2{font-size:1rem;margin:0 0 8px}
+.log ol{margin:0;padding:0;list-style:none;max-height:340px;overflow-y:auto;font-variant-numeric:tabular-nums;font-size:.92rem}
+.log li{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line)}
+.log li.auto{color:var(--accent)}
+.empty{color:var(--mute);font-size:.92rem;margin:0}
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#8a6038">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+<main>
+<h1>Triangle Peg Puzzle</h1>
+<p class="sub">Fourteen pegs, one empty hole. Jump a peg over a neighbor into an empty hole, which removes the neighbor. Finish with as few pegs as you can, ideally one. Click a peg, then click a highlighted hole.</p>
+
+<div class="bar">
+  <button class="act" id="restart">Restart</button>
+  <button class="act" id="undo" disabled>Undo</button>
+  <button class="act" id="hint">Hint</button>
+  <button class="act primary" id="solve">Solve</button>
+  <label class="group">Solver speed<input type="range" id="speed" min="1" max="10" value="5" aria-label="Solver speed"></label>
+</div>
+
+<div class="stats">
+  <div class="stat"><b id="left">14</b><small>Pegs left</small></div>
+  <div class="stat"><b id="jumps">0</b><small>Jumps made</small></div>
+  <div class="stat"><b>13</b><small>Jumps for a perfect game</small></div>
+</div>
+
+<div class="layout">
+  <section>
+    <div class="board"><svg id="svg" viewBox="0 0 400 340" role="group" aria-label="Triangular peg board"></svg></div>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+  </section>
+  <aside class="log">
+    <h2>Move log</h2>
+    <ol id="log"></ol>
+    <p class="empty" id="empty">No jumps yet.</p>
+  </aside>
+</div>
+</main>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var ROWS=5,N=15,pos=[],J=[];
+  function idx(r,c){return r*(r+1)/2+c}
+  function ok(r,c){return r>=0&&r<ROWS&&c>=0&&c<=r}
+  var r,c;
+  for(r=0;r<ROWS;r++)for(c=0;c<=r;c++)pos[idx(r,c)]={x:200+(c-r/2)*68,y:58+r*58};
+  var D=[[0,1],[0,-1],[1,0],[1,1],[-1,0],[-1,-1]];
+  for(r=0;r<ROWS;r++)for(c=0;c<=r;c++)D.forEach(function(d){
+    var r1=r+d[0],c1=c+d[1],r2=r+2*d[0],c2=c+2*d[1];
+    if(ok(r1,c1)&&ok(r2,c2))J.push([idx(r,c),idx(r1,c1),idx(r2,c2)]);
+  });
+
+  var board,sel,moves,history,over,hint,solving,timer;
+
+  function reset(){
+    clearTimeout(timer);timer=null;solving=false;over=false;sel=-1;hint=null;moves=0;history=[];
+    board=[];for(var i=0;i<N;i++)board.push(i===0?0:i+1);
+    $('log').innerHTML='';$('empty').style.display='';
+    setMsg('');render();
+  }
+  function setMsg(t,cls){var m=$('msg');m.textContent=t;m.className='msg'+(cls?' '+cls:'')}
+  function count(){return board.filter(Boolean).length}
+  function legal(i){return J.filter(function(j){return j[0]===i&&board[i]&&board[j[1]]&&!board[j[2]]})}
+  function anyMove(){return J.some(function(j){return board[j[0]]&&board[j[1]]&&!board[j[2]]})}
+
+  function findSol(){
+    var m0=0,i;for(i=0;i<N;i++)if(board[i])m0|=1<<i;
+    var dead={},path=[];
+    function dfs(m,n){
+      if(n===1)return true;
+      if(dead[m])return false;
+      for(var k=0;k<J.length;k++){
+        var j=J[k],f=1<<j[0],o=1<<j[1],t=1<<j[2];
+        if((m&f)&&(m&o)&&!(m&t)){path.push(j);if(dfs((m&~f&~o)|t,n-1))return true;path.pop()}
+      }
+      dead[m]=1;return false;
+    }
+    return dfs(m0,count())?path:null;
+  }
+
+  function render(){
+    var s='',i,p,id,cls;
+    s+='<polygon class="tri" points="200,16 22,313 378,313"/>';
+    for(i=0;i<N;i++){
+      p=pos[i];id=board[i];cls='hole'+(id?' on':'');
+      if(sel===i)cls+=' sl';
+      if(sel>=0&&legal(sel).some(function(j){return j[2]===i}))cls+=' tg';
+      if(hint&&hint.from===i)cls+=' hf';
+      if(hint&&hint.to===i)cls+=' ht';
+      s+='<g class="'+cls+'" data-i="'+i+'" tabindex="0" role="button" aria-label="Hole '+(i+1)+(id?', peg':', empty')+'">';
+      s+='<circle class="h" cx="'+p.x+'" cy="'+p.y+'" r="22"/>';
+      if(id)s+='<circle class="peg" cx="'+p.x+'" cy="'+p.y+'" r="17" fill="hsl('+((id*47)%360)+' 70% 62%)"/>';
+      s+='<text class="num" x="'+p.x+'" y="'+p.y+'">'+(i+1)+'</text></g>';
+    }
+    $('svg').innerHTML=s;
+    $('left').textContent=count();
+    $('jumps').textContent=moves;
+    $('undo').disabled=solving||!history.length;
+    $('hint').disabled=solving||over;
+    $('solve').textContent=solving?'Stop':'Solve';
+  }
+
+  function apply(j,auto){
+    history.push(board.slice());
+    board[j[2]]=board[j[0]];board[j[0]]=0;board[j[1]]=0;moves++;
+    var li=document.createElement('li');if(auto)li.className='auto';
+    li.innerHTML='<span>#'+moves+'  '+(j[0]+1)+' \u2192 '+(j[2]+1)+'</span><span>removed '+(j[1]+1)+'</span>';
+    $('log').appendChild(li);$('empty').style.display='none';$('log').scrollTop=1e6;
+    sel=-1;hint=null;
+    if(!anyMove()){
+      over=true;solving=false;
+      var n=count();
+      setMsg(n===1?'Genius! Only one peg left.':n===2?'Pretty smart. Two pegs left.':n===3?'Not bad. Three pegs left.':n+' pegs left. Undo or restart to try again.',n===1?'win':'');
+    }
+  }
+
+  function click(i){
+    if(solving||over)return;
+    var mv=sel>=0?legal(sel).filter(function(j){return j[2]===i})[0]:null;
+    if(mv){setMsg('');apply(mv,false);render();return}
+    if(board[i]){
+      if(!legal(i).length){setMsg('Peg '+(i+1)+' has no jump available.','err');sel=-1}
+      else{setMsg('');sel=sel===i?-1:i}
+      hint=null;
+    }else sel=-1;
+    render();
+  }
+
+  $('svg').addEventListener('click',function(e){var g=e.target.closest('.hole');if(g)click(+g.dataset.i)});
+  $('svg').addEventListener('keydown',function(e){
+    var g=e.target.closest&&e.target.closest('.hole');
+    if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();click(+g.dataset.i)}
+  });
+
+  $('restart').onclick=reset;
+
+  $('undo').onclick=function(){
+    if(solving||!history.length)return;
+    board=history.pop();moves--;over=false;sel=-1;hint=null;
+    var log=$('log');log.removeChild(log.lastChild);
+    if(!history.length)$('empty').style.display='';
+    setMsg('');render();
+  };
+
+  $('hint').onclick=function(){
+    if(solving||over)return;
+    var p=findSol();
+    if(!p){setMsg('No route to a single peg from here. Undo some jumps or restart.','err');return}
+    sel=-1;hint={from:p[0][0],to:p[0][2]};
+    setMsg('Try jumping peg '+(p[0][0]+1)+' over peg '+(p[0][1]+1)+' into hole '+(p[0][2]+1)+'.');
+    render();
+  };
+
+  function delay(){return 1000-90*(+$('speed').value)}
+
+  $('solve').onclick=function(){
+    if(solving){clearTimeout(timer);solving=false;setMsg('Stopped.');render();return}
+    if(over)return;
+    var p=findSol();
+    if(!p){setMsg('No route to a single peg from here. Undo some jumps or restart.','err');return}
+    solving=true;sel=-1;hint=null;setMsg('Solving\u2026');render();
+    var i=0;
+    (function step(){
+      if(!solving)return;
+      apply(p[i++],true);
+      render();
+      if(solving&&i<p.length)timer=setTimeout(step,delay());
+    })();
+  };
+
+  reset();
+})();
+</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}</script>
+</body>
+</html>
